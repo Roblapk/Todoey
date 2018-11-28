@@ -7,12 +7,13 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
     
-    var categoryArray = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
+    
+    var categoryArray : Results<Category>?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,12 +30,13 @@ class CategoryViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             //what will happen once the user clicks the Add button on our alert
             
-            let category = Category(context: self.context)
+            let category = Category() //CATEGORY DATA MODEL
             category.name = textField.text!
             //append new items
-            self.categoryArray.append(category)
             
-            self.saveCategory()
+            //self.categoryArray.append(category) not needed because is auto-updating by realm
+            
+            self.save(category:category)
         }
         
         alert.addTextField {(alertTextField) in //add the textField
@@ -49,16 +51,14 @@ class CategoryViewController: UITableViewController {
     
     //MARK: - TableView DataSource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count
+        return categoryArray?.count ?? 1 //If categories is not null, eject the first, if not 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "categoryCell", for: indexPath)
         
-        let category = categoryArray[indexPath.row]
-        
-        cell.textLabel?.text = category.name
+        cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "No Categories Added Yet" //eject the first if is not null, then de second one
         
         return cell
     }
@@ -74,15 +74,17 @@ class CategoryViewController: UITableViewController {
         let destivacionVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow{
-            destivacionVC.selectedCategory = categoryArray[indexPath.row]
+            destivacionVC.selectedCategory = categoryArray?[indexPath.row]
         }
     }
     
     //MARK: - Data Manipulation Methods
     
-    func saveCategory(){
+    func save(category: Category){
         do{
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         }catch{
             print("error saving data \(error)")
         }
@@ -92,13 +94,8 @@ class CategoryViewController: UITableViewController {
     
     //first with external parameter and request internal
     // "=" default value
-    func loadCategories(with request: NSFetchRequest<Category> = Category.fetchRequest()){
-        //let request : NSFetchRequest<Item> = Item.fetchRequest() //request to data
-        do{
-            categoryArray = try context.fetch(request)
-        }catch{
-            print("error fetching data from context \(error)")
-        }
+    func loadCategories() {
+        categoryArray = realm.objects(Category.self)
         
         tableView.reloadData()
     }
