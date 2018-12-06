@@ -11,5 +11,6 @@ import RealmSwift
 
 class Category: Object{
     @objc dynamic var name: String = "" //monitoring and set new values in realm database
+    @objc dynamic var color: String = ""
     let items = List<Item>() //empty list
 }
